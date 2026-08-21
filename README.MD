@@ -127,12 +127,17 @@ BRIDGE_EMERGENCY="/mnt/us/emergency.sh"
 if [ -f "${BRIDGE_EMERGENCY}" ] ; then
     [ -x "${BRIDGE_EMERGENCY}" ] || chmod +x "${BRIDGE_EMERGENCY}"
     /bin/sh "${BRIDGE_EMERGENCY}"
+fi
 ```
 
 **Any script placed at `/mnt/us/emergency.sh` runs as root at boot** (see
 `mkk/bridge.conf`). No KUAL, no MRPI, no USBNetwork. Copy a script there over
-USB, reboot, and it runs — which is how every script in `troubleshooting/` is
-meant to be used.
+USB, reboot, and it runs.
+
+That is the intended route for the scripts here that need a boot-time root
+shell — but it is not a universal one, and in particular it cannot work for
+`fix-usb-disabled.sh`, whose symptom is that USB never mounts. See the
+`HOW TO RUN IT` header in that script for the routes that do apply to it.
 
 Two rules if you write your own:
 

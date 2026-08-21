@@ -43,10 +43,17 @@ done
 
 echo
 echo "verifying the exploit filename survived verbatim:"
-if ls "$DST/documents/dictionaries/" 2>/dev/null | grep -q 'export SLASH'; then
-  echo "  OK      shell-injection dictionary file present"
+# Compared in full, not grepped for a substring: a name that lost its trailing
+# characters, gained a space or had a metacharacter rewritten still contains
+# "export SLASH" while being useless as an exploit.
+EXPLOIT="a; export SLASH=\$(awk 'BEGIN {print substr(ARGV[1], 0, 1)}' \${PWD}); sh \${SLASH}mnt\${SLASH}us\${SLASH}jb"
+if [ -e "$DST/documents/dictionaries/$EXPLOIT" ]; then
+  echo "  OK      shell-injection dictionary file present, name byte-identical"
 else
   echo "  MISSING exploit filename did not survive the copy"
+  echo "  expected: $EXPLOIT"
+  echo "  found in documents/dictionaries/:"
+  ls -1 "$DST/documents/dictionaries/" 2>/dev/null | sed 's/^/    /' || echo "    (directory missing)"
   rc=1
 fi
 
@@ -54,6 +61,9 @@ echo
 echo "stray AppleDouble sidecars in root:"
 ls -1a "$DST" 2>/dev/null | grep '^\._' || echo "  (none - clean)"
 
-[ "$rc" = 0 ] && echo "\nPayload copied correctly. Eject before continuing." \
-              || echo "\n*** COPY INCOMPLETE - do not continue, the jailbreak will fail silently. ***"
+if [ "$rc" = 0 ]; then
+  printf '\nPayload copied correctly. Eject before continuing.\n'
+else
+  printf '\n*** COPY INCOMPLETE - do not continue, the jailbreak will fail silently. ***\n'
+fi
 exit $rc

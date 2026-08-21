@@ -20,6 +20,26 @@
 # DIAGNOSIS on the host: `ioreg -p IOUSB` (macOS) or `lsusb` shows the device
 # while `diskutil list external` / `lsblk` shows no volume. That is this bug,
 # not a cable.
+#
+# HOW TO RUN IT — read this first, because it cannot bootstrap itself over
+# USB: USB not mounting is the symptom. This is a ROOT-SHELL convenience, not
+# a rescue tool. If your `;` commands still work you do not need it at all:
+#
+#   `;enter_demo` puts the device back in demo mode, which means DEMO_MODE
+#   exists again, which re-arms the device's own enableUSBInDemo.sh; `;uzb` —
+#   the same command the README uses at the hotfix step — then gets you a
+#   mount. Leaving demo mode afterwards the sanctioned way (`;demo` -> Resell
+#   Device) runs deleteDemoModeFlagFile.sh, which removes DEMO_MODE and
+#   no_transitions together, so nothing is stranded a second time.
+#
+# Use this script when you have root and would rather not do that round trip
+# — over ssh if dropbear is installed, from KUAL, or as /mnt/us/emergency.sh
+# if you can still reach /mnt/us. It is one `rm` instead of two reboots.
+#
+# If the `;` channel is dead too (the managed-mode lockout), neither route is
+# open. A ~40 second power hold with the cable UNPLUGGED restored demo mode
+# and the `;` channel on my PW3; held while plugged in it only powers the
+# device off.
 
 LOG=/mnt/us/fix-usb.log
 {

@@ -1,19 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-// exploitName is the shape of the payload file whose NAME is the shell
-// injection: leading semicolon, $(), ${}, spaces, and a TRAILING SPACE.
-//
-// The trailing space is not decoration. It is the character most likely to be
-// eaten by a shell pipeline, a file manager, or an archive round-trip — and if
-// it is lost the jailbreak fails silently. No literal "/" appears because a
-// filename cannot contain one; that is precisely why the exploit assigns SLASH.
-const exploitName = `;export SLASH=${HOME%${HOME#?}};$(sh ${SLASH}mnt${SLASH}us${SLASH}jb) `
+// exploitName is exploitFilename (main.go) under its old local name, kept so
+// the test below reads standalone. Verified byte-for-byte against the real
+// payload on disk: 103 bytes, no leading bare ";", no trailing space — a
+// prior version of both this fixture and Copilot's PR review guessed wrong on
+// both counts. No literal "/" appears because a filename cannot contain one;
+// that is precisely why the exploit assigns SLASH.
+const exploitName = exploitFilename
+
+func init() {
+	if len(exploitName) != 103 {
+		panic(fmt.Sprintf("exploitName fixture is %d bytes, want 103 — it no longer matches the real payload", len(exploitName)))
+	}
+}
 
 // TestPayloadPreservesExploitFilename is the reason this Go program exists.
 // If it ever fails, the copy path has grown a shell somewhere.

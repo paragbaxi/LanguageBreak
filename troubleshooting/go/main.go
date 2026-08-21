@@ -12,11 +12,11 @@
 //
 // WHY A GO VERSION EXISTS AT ALL
 // One file in the payload has a NAME that is the shell injection carrying the
-// exploit: semicolons, $(), ${} and a trailing space. Every hop through a shell,
-// a GUI file manager, or an archive tool is a chance to alter it, and the
-// failure is SILENT — the jailbreak simply does nothing and you are left
-// debugging the device. Go moves filenames as bytes; there is no shell in the
-// path. main_test.go round-trips that exact name, trailing space included.
+// exploit — a leading "a;", $(), ${} expansions, no trailing space, 103 bytes
+// exactly. Every hop through a shell, a GUI file manager, or an archive tool is
+// a chance to alter it, and the failure is SILENT — the jailbreak simply does
+// nothing and you are left debugging the device. Go moves filenames as bytes;
+// there is no shell in the path. main_test.go round-trips that exact name.
 //
 // The shell scripts remain the primary, dependency-free path. This is for
 // people who would rather run one binary than trust their file manager, and it
@@ -326,6 +326,12 @@ func copyFileSync(src, dst string) error {
 	return out.Close()
 }
 
+// exploitFilename is the payload file whose NAME is the shell injection.
+// Compared in full below, not by substring: a name that lost bytes, gained a
+// space, or had a metacharacter mangled can still contain "export SLASH"
+// while being useless as an exploit.
+const exploitFilename = `a; export SLASH=$(awk 'BEGIN {print substr(ARGV[1], 0, 1)}' ${PWD}); sh ${SLASH}mnt${SLASH}us${SLASH}jb`
+
 // findExploit looks for the payload file whose NAME carries the injection.
 func findExploit(dir string) (string, bool) {
 	entries, err := os.ReadDir(dir)
@@ -333,7 +339,7 @@ func findExploit(dir string) (string, bool) {
 		return "", false
 	}
 	for _, e := range entries {
-		if strings.Contains(e.Name(), "export SLASH") {
+		if e.Name() == exploitFilename {
 			return e.Name(), true
 		}
 	}
