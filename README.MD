@@ -31,6 +31,7 @@ The most up to date release can be found [here](https://github.com/notmarek/Lang
 5. Type `;demo` into the Kindle search bar, then press enter to access the Demo Mode Configuration screen.
 6. Select the `Sideload Content` option.
 7. Connect your Kindle to a PC, then copy the contents of the `LanguageBreak` folder from the [latest release's *.tar.gz file](https://github.com/notmarek/LanguageBreak/releases) to the Kindle's root directory (if prompted, overrwrite the existing files).
+    - ⚠️ **Do not copy with a graphical file manager.** `.demo` is a *hidden* folder that Finder/Explorer will silently leave behind, and one payload file's *filename* is the exploit itself (it contains `;`, `$`, `(`, `)`, quotes and spaces) and must land byte-identical. Both failures are silent — the jailbreak simply does nothing. Use `rsync`/`cp` from a terminal, or [`troubleshooting/copy-payload.sh`](troubleshooting/copy-payload.sh), which copies and then verifies.
 8. Eject, then *unplug your Kindle*, then return to the Demo Configuration Screen (using the method in step 5, if required).
 9. Select `Resell Device`, then confirm.
 10. As soon as the "Press the Power Button" screen appears, plug your Kindle back into your computer. (This is time sensitive, be quick.)
@@ -46,10 +47,29 @@ The most up to date release can be found [here](https://github.com/notmarek/Lang
 3. Eject your Kindle, then `;dsts` into the Kindle search bar to access the settings page. Locate the `Update your Kindle` option and press it, then confirm.
  - Using your phone to translate the menus is helpful if you don't happen to be able to read Chinese.
  - If you see an infoscreen that states "Update Error" or similar then try to apply the hotfix again (last three steps)
+ - **On PW3 the hotfix commonly has to be applied twice.** The first pass can leave the device looking fine (`;log` works, KUAL opens) while actually being broken: no `mkk` folder, permission errors on the rootfs, and KUAL apps that launch and silently die. If `mkk` is missing, apply the hotfix again — you do **not** need to re-enter demo mode, just copy the `.bin` and update. See [#48](https://github.com/notmarek/LanguageBreak/issues/48).
 
 This will reboot the device out of Demo mode. Your device may go into Managed mode after completing these steps. Managed devices have some settings greyed out, and ask the user to contact their system administrator. See below for steps on how to restore functionality (and the correct language) to your device.
     
 ## Restoring the Correct Language and Exiting Managed Mode
+
+> **If the `;` commands below do nothing**, the command channel itself is broken
+> and neither procedure can work — `;demo`, `;uzb` and `;enter_demo` all fall
+> through to an ordinary library search. This is the state reported in
+> [#67](https://github.com/notmarek/LanguageBreak/issues/67),
+> [#58](https://github.com/notmarek/LanguageBreak/issues/58) and
+> [#52](https://github.com/notmarek/LanguageBreak/issues/52), usually alongside
+> greyed-out Settings and USB that never mounts.
+>
+> Two things that recover it:
+>
+> - **A 40-second power-hold with the cable UNPLUGGED** often restores demo mode
+>   and the `;` channel. Holding it while connected only powers the device off.
+> - **[`troubleshooting/fix-managed-mode.sh`](troubleshooting/fix-managed-mode.sh)**
+>   resets `/var/local` from root, which is what a factory reset does internally
+>   — `/opt/var/local` is a read-only squashfs holding the pristine copy. This
+>   works with Settings locked. **The jailbreak survives**, because
+>   `bridge.conf` restores `/var/local/mkk` from `/mnt/us/mkk`.
     
 ### If your kindle **is not** registered to an Amazon account:
 1. Type `;demo` into the Kindle search bar.
@@ -73,8 +93,11 @@ A: Not a question.. but checkout issue [#48](https://github.com/notmarek/Languag
 Q: How do I verify my installation?
 
 A: (before applying hotfix): Install hotfix, if you can do that then it worked.
+**Note that `;log` does NOT work yet at this stage** — before the hotfix it falls through to an ordinary library search, and that is *expected*. It is not a sign of failure, and several issues in this tracker are people concluding otherwise.
 
 A: (after applying hotfix): Type `;log` into the Kindle search bar, some text should appear at the top right side of the screen.
+
+A: (either stage, no shell needed): run [`troubleshooting/verify-jailbreak.sh`](troubleshooting/verify-jailbreak.sh). It checks the artefacts the exploit itself writes — `LanguageBreakRan`, `languagebreak_log` ending in `Finished installing jailbreak!`, and whether `mkk` exists — and writes the result to `/mnt/us/verify-jailbreak.txt`, readable over USB.
 
 Q: Where are the hotfix files?
 
@@ -93,6 +116,42 @@ LanguageBreak.tar.gz
 |	|	|-- boot.flag
 |-- Update_hotfix_languagebreak-*.bin
 ```
+
+# Recovering a device you cannot reach
+
+If the `;` commands are dead, Settings is locked and USB will not mount, it can
+look like there is no way back in. There is, and it is built into the jailbreak:
+
+```sh
+BRIDGE_EMERGENCY="/mnt/us/emergency.sh"
+if [ -f "${BRIDGE_EMERGENCY}" ] ; then
+    [ -x "${BRIDGE_EMERGENCY}" ] || chmod +x "${BRIDGE_EMERGENCY}"
+    /bin/sh "${BRIDGE_EMERGENCY}"
+```
+
+**Any script placed at `/mnt/us/emergency.sh` runs as root at boot** (see
+`mkk/bridge.conf`). No KUAL, no MRPI, no USBNetwork. Copy a script there over
+USB, reboot, and it runs — which is how every script in `troubleshooting/` is
+meant to be used.
+
+Two rules if you write your own:
+
+1. **Rename the script before doing anything destructive.** If it dies partway,
+   `/mnt/us` (a `fuse.fsp` mount) can go with it, leaving the file in place to
+   re-run on every boot — a permanent boot loop that is worse than the original
+   problem.
+2. **Call `/var/local/mkk/bridge.sh` at the end** if you are not rebooting, as
+   the emergency path makes the bridge skip its own setup.
+
+### USB never mounts after demo mode
+
+The host sees the device on the USB bus but no volume ever appears, which looks
+exactly like a bad cable. `disableUSBInDemo.sh` creates
+`/var/local/system/no_transitions`, and Amazon's own `enableUSBInDemo.sh` only
+removes it *if `DEMO_MODE` still exists* — so once the demo flag is cleared the
+blocker is stranded permanently.
+[`troubleshooting/fix-usb-disabled.sh`](troubleshooting/fix-usb-disabled.sh)
+removes it.
 
 # Troubleshooting
 Having general issues?
