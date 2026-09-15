@@ -5,8 +5,8 @@ jobs:
   Build-Latest-Artifacts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: ls ${{ github.workspace }}
@@ -44,7 +44,7 @@ jobs:
         run: cd build && tar -czvf ../LanguageBreak.tar.gz .
       - run: cd ${{ github.workspace }} && rm -rf build/* && mv LanguageBreak.tar.gz build/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v5
         with:
           name: LanguageBreak-master
           path: ${{ github.workspace }}/build/
