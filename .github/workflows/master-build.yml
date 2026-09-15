@@ -3,7 +3,7 @@ run-name: Building LanguageBreak from master 🚀
 on: [push, workflow_dispatch]
 jobs:
   Build-Latest-Artifacts:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, languagebreak]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
